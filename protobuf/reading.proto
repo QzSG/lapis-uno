@@ -1,0 +1,31 @@
+syntax = "proto3";
+package pb;
+
+option go_package = "github.com/QzSG/lapis-uno/protobuf;pb";
+
+message Reading {
+    //Field types are in Go|Python3|C++
+
+    // Indicates if it is the start of a move : *bool|bool|bool
+    bool isStartMove = 1;
+
+    // To identify the clients : *string|str|string
+    string clientID = 2;
+
+    // Accelerometer X Axis value : *float32|float|float
+    float accX = 3;
+    // Accelerometer Y Axis value : *float32|float|float
+    float accY = 4;
+    // Accelerometer Z Axis value : *float32|float|float
+    float accZ = 5;
+
+    // Gyroscope X Axis value : *float32|float|float
+    float gyroX = 6;
+    // Gyroscope Y Axis value : *float32|float|float
+    float gyroY = 7;
+    // Gyroscope Z Axis value : *float32|float|float
+    float gyroZ = 8;
+
+    // Timestamp in unix nanoseconds : *int64|int/long/int64 
+    int64 timeStamp = 9;
+}
