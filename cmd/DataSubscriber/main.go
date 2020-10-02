@@ -8,10 +8,16 @@ import (
 	"syscall"
 	"time"
 
+	ntp "github.com/QzSG/lapis-uno/cmd/NTP"
 	pb "github.com/QzSG/lapis-uno/protobuf"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
+)
+
+var (
+	clock  = time.Now()
+	offset time.Duration
 )
 
 func handleSignals(sigs <-chan os.Signal, done chan<- struct{}) {
@@ -30,7 +36,7 @@ var f mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 		log.Fatalln("Failed to parse sensor reading:", err)
 	}
 
-	fmt.Printf("Elapsed[ms]: %s\n", time.Since(time.Unix(0, reading.GetTimeStamp())))
+	fmt.Printf("Elapsed[ms]: %s\n", clock.Add(time.Since(clock)+offset).Sub(time.Unix(0, reading.GetTimeStamp())))
 }
 
 func init() {
@@ -46,6 +52,17 @@ func main() {
 
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	go handleSignals(signalChan, done)
+
+	log.Info("Starting NTPClient to get offset")
+
+	clockOffset, err := ntp.Offset()
+	if err != nil {
+		log.Error(err.Error())
+	}
+	offset = clockOffset
+
+	log.Info("NTP Offset:", offset)
+	log.Info("NTP Clock:", clock.Add(time.Since(clock)+offset))
 
 	const ClientID = "lapis-client-test-0"
 	const BrokerConfig = "ssl://mqtts.qz.sg:8883"
@@ -79,4 +96,5 @@ func main() {
 
 	// Signal stuff
 	<-done
+	client.Disconnect(10)
 }
