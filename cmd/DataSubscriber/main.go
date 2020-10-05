@@ -37,6 +37,7 @@ var f mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 	}
 
 	fmt.Printf("Elapsed[ms]: %s\n", clock.Add(time.Since(clock)+offset).Sub(time.Unix(0, reading.GetTimeStamp())))
+	fmt.Println("Reading:", reading)
 }
 
 func init() {

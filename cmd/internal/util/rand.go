@@ -8,12 +8,12 @@ import (
 	pb "github.com/QzSG/lapis-uno/protobuf"
 )
 
-// RandFloats returns a float32 slice containing number of floats you need.
-func RandFloats(minVal float32, maxVal float32, count int) []float32 {
+// RandFloats returns a float64 slice containing number of floats you need.
+func RandFloats(minVal float64, maxVal float64, count int) []float64 {
 	rand.Seed(time.Now().UnixNano())
-	floats := make([]float32, count)
+	floats := make([]float64, count)
 	for i := range floats {
-		floats[i] = minVal + rand.Float32()*(maxVal-minVal)
+		floats[i] = minVal + rand.Float64()*(maxVal-minVal)
 	}
 	return floats
 }
