@@ -8,12 +8,16 @@ import (
 	"syscall"
 	"time"
 
-	pb "github.com/QzSG/lapis-uno/protobuf"
-
+	ntp "github.com/QzSG/lapis-uno/cmd/NTP"
 	"github.com/QzSG/lapis-uno/cmd/internal/util"
+	pb "github.com/QzSG/lapis-uno/protobuf"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/golang/protobuf/proto"
 	log "github.com/sirupsen/logrus"
+)
+
+var (
+	clock = time.Now()
 )
 
 func handleSignals(sigs <-chan os.Signal, done chan<- struct{}) {
@@ -37,6 +41,15 @@ func main() {
 
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	go handleSignals(signalChan, done)
+
+	log.Info("Starting NTPClient to get offset")
+
+	clockOffset, err := ntp.Offset()
+	if err != nil {
+		log.Error(err.Error())
+	}
+	log.Info("NTP Offset:", clockOffset)
+	log.Info("NTP Clock:", clock.Add(time.Since(clock)+clockOffset))
 
 	const ClientID = "lapis-client-test-1"
 	const BrokerConfig = "ssl://mqtts.qz.sg:8883"
@@ -85,7 +98,8 @@ T:
 		case <-ticker.C:
 
 			reading = util.RandReading()
-
+			readingTime := clock.Add(time.Since(clock) + clockOffset)
+			reading.TimeStamp = readingTime.UnixNano()
 			payload, err := proto.Marshal(reading)
 			if err != nil {
 				log.Fatalln("Failed to encode sensor reading:", err)

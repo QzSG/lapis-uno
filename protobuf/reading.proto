@@ -12,20 +12,23 @@ message Reading {
     // To identify the clients : *string|str|string
     string clientID = 2;
 
+    // Position of client : int32, int, int32
+    int32 clientPos = 3;
+
     // Accelerometer X Axis value : *float64|float|double
-    double accX = 3;
+    double accX = 4;
     // Accelerometer Y Axis value : *float64|float|double
-    double accY = 4;
+    double accY = 5;
     // Accelerometer Z Axis value : *float64|float|double
-    double accZ = 5;
+    double accZ = 6;
 
     // Gyroscope X Axis value : *float64|float|double
-    double gyroX = 6;
+    double gyroX = 7;
     // Gyroscope Y Axis value : *float64|float|double
-    double gyroY = 7;
+    double gyroY = 8;
     // Gyroscope Z Axis value : *float64|float|double
-    double gyroZ = 8;
+    double gyroZ = 9;
 
     // Timestamp in unix nanoseconds : *int64|int/long/int64 
-    int64 timeStamp = 9;
+    int64 timeStamp = 10;
 }
