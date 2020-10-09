@@ -3,6 +3,15 @@ package pb;
 
 option go_package = "github.com/QzSG/lapis-uno/protobuf;pb";
 
+service Sensor {
+    // Sends a greeting
+    rpc ReadingStream (stream Reading) returns (stream Reply) {}
+}
+
+message Reply {
+    int32 status = 1;
+}
+
 message Reading {
     //Field types are in Go|Python3|C++
 
@@ -22,12 +31,12 @@ message Reading {
     // Accelerometer Z Axis value : *float64|float|double
     double accZ = 6;
 
-    // Gyroscope X Axis value : *float64|float|double
-    double gyroX = 7;
-    // Gyroscope Y Axis value : *float64|float|double
-    double gyroY = 8;
-    // Gyroscope Z Axis value : *float64|float|double
-    double gyroZ = 9;
+    // Gyroscope Roll value : *float64|float|double
+    double gyroRoll = 7;
+    // Gyroscope Pitch value : *float64|float|double
+    double gyroPitch = 8;
+    // Gyroscope Yaw value : *float64|float|double
+    double gyroYaw = 9;
 
     // Timestamp in unix nanoseconds : *int64|int/long/int64 
     int64 timeStamp = 10;
