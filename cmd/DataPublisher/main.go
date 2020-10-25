@@ -2,8 +2,10 @@ package main
 
 import (
 	"crypto/tls"
+	"flag"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"os"
 	"os/signal"
@@ -23,6 +25,7 @@ var (
 	port       = 10101
 	offset     time.Duration
 	grpcServer *grpc.Server
+	cid        string
 )
 
 func handleSignals(sigs <-chan os.Signal, done chan<- struct{}) {
@@ -35,6 +38,9 @@ func handleSignals(sigs <-chan os.Signal, done chan<- struct{}) {
 }
 
 func init() {
+	rand.Seed(time.Now().UnixNano())
+	flag.StringVar(&cid, "cid", "lapis-client-pub-"+fmt.Sprint(rand.Intn(1000)), "If not provided, defaults to lapis-client-pub-X where X is a random int between 1 & 1000")
+
 	log.SetOutput(os.Stdout)
 	log.SetLevel(log.DebugLevel)
 }
@@ -72,10 +78,10 @@ func (s *sensorServer) ReadingStream(stream pb.Sensor_ReadingStreamServer) error
 }
 
 func newServer() *sensorServer {
-	const ClientID = "lapis-client-test-1"
+	var ClientID = cid
 	const BrokerConfig = "ssl://mqtts.qz.sg:8883"
 
-	log.Info("Connecting to " + BrokerConfig)
+	log.Info("Connecting to " + BrokerConfig + " with ClientID " + ClientID)
 
 	tlsConfig := &tls.Config{
 		//Go will dig out and use the System RootCA cert set if nothing is passed in
@@ -85,8 +91,8 @@ func newServer() *sensorServer {
 
 	mqttOpts := mqtt.NewClientOptions().AddBroker(BrokerConfig).SetClientID(ClientID)
 	mqttOpts.SetTLSConfig(tlsConfig)
-	mqttOpts.SetUsername("bench")
-	mqttOpts.SetPassword("bench")
+	mqttOpts.SetUsername("xilinx")
+	mqttOpts.SetPassword("undecimus")
 	topic := fmt.Sprintf("sensor/%s/data", ClientID)
 
 	log.WithFields(log.Fields{
@@ -114,6 +120,8 @@ func main() {
 
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	go handleSignals(signalChan, done)
+
+	flag.Parse()
 
 	log.Info("Starting NTPClient to get offset")
 

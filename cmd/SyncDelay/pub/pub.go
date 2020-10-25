@@ -50,9 +50,9 @@ func main() {
 	}
 	log.Info("Clock Offset:", clockOffset)
 
-	const ClientID1 = "lapis-client-pub-1"
-	const ClientID2 = "lapis-client-pub-2"
-	const ClientID3 = "lapis-client-pub-3"
+	const ClientID1 = "lapis-client-test-111"
+	const ClientID2 = "lapis-client-test-222"
+	const ClientID3 = "lapis-client-test-333"
 	const BrokerConfig = "ssl://mqtts.qz.sg:8883"
 
 	log.Info("Connecting to " + BrokerConfig)
@@ -98,26 +98,81 @@ func main() {
 T:
 	for {
 
-		start := publishReading(client1, clockOffset, ClientID1)
+		start := publishReading(client1, clockOffset, ClientID1, true)
+		log.Debug("C1 sent at ", start.UnixNano())
+
+		time.Sleep(10 * time.Millisecond)
+		publishReading(client1, clockOffset, ClientID1, true)
+		time.Sleep(10 * time.Millisecond)
+		publishReading(client1, clockOffset, ClientID1, true)
+		time.Sleep(10 * time.Millisecond)
+
 		_, err = fmt.Scan(&last)
 
 		if last == 2 {
-			fmt.Println("Elapsed |", time.Since(start)+clockOffset, "Sending packet for client 3")
-			mid := publishReading(client3, clockOffset, ClientID3)
+			log.Infoln("Elapsed |", time.Since(start)+clockOffset, "Sending packet for client 3")
+			mid := publishReading(client3, clockOffset, ClientID3, true)
+			log.Debug("C3 sent at ", mid.UnixNano())
 
-			fmt.Println("Elapsed |", mid.Sub(start), "Sending packet for client 2")
-			end := publishReading(client2, clockOffset, ClientID2)
+			publishReading(client1, clockOffset, ClientID1, true)
+			time.Sleep(10 * time.Millisecond)
+			publishReading(client1, clockOffset, ClientID1, true)
+			publishReading(client3, clockOffset, ClientID3, true)
+			time.Sleep(10 * time.Millisecond)
+			publishReading(client3, clockOffset, ClientID3, true)
 
-			fmt.Println("Elapsed |", end.Sub(start), "Sync Delay between Client 1 and 2")
+			log.Infoln("Elapsed |", mid.Sub(start), "Sending packet for client 2")
+			end := publishReading(client2, clockOffset, ClientID2, true)
+			log.Debug("C2 sent at ", end.UnixNano())
+			time.Sleep(10 * time.Millisecond)
+			publishReading(client2, clockOffset, ClientID2, true)
+			time.Sleep(10 * time.Millisecond)
+			publishReading(client2, clockOffset, ClientID2, true)
+
+			log.Infoln("Elapsed |", end.Sub(start), "Sync Delay between Client 1 and 2")
+
+			//Send idle packets
+			publishReading(client1, clockOffset, ClientID1, false)
+			publishReading(client2, clockOffset, ClientID2, false)
+			publishReading(client3, clockOffset, ClientID3, false)
+			time.Sleep(5 * time.Millisecond)
+			publishReading(client1, clockOffset, ClientID1, false)
+			publishReading(client2, clockOffset, ClientID2, false)
+			publishReading(client3, clockOffset, ClientID3, false)
+			//time.Sleep(50 * time.Millisecond)
 		}
 		if last == 3 {
-			fmt.Println("Elapsed |", time.Since(start)+clockOffset, "Sending packet for client 2")
-			mid := publishReading(client2, clockOffset, ClientID2)
+			log.Infoln("Elapsed |", time.Since(start)+clockOffset, "Sending packet for client 2")
+			mid := publishReading(client2, clockOffset, ClientID2, true)
+			log.Debug("C2 sent at ", mid.UnixNano())
 
-			fmt.Println("Elapsed |", mid.Sub(start), "Sending packet for client 3")
-			end := publishReading(client3, clockOffset, ClientID3)
+			publishReading(client1, clockOffset, ClientID1, true)
+			time.Sleep(10 * time.Millisecond)
+			publishReading(client1, clockOffset, ClientID1, true)
+			publishReading(client2, clockOffset, ClientID2, true)
+			time.Sleep(10 * time.Millisecond)
+			publishReading(client2, clockOffset, ClientID2, true)
 
-			fmt.Println("Elapsed |", end.Sub(start), "Sync Delay between Client 1 and 3")
+			log.Infoln("Elapsed |", mid.Sub(start), "Sending packet for client 3")
+			end := publishReading(client3, clockOffset, ClientID3, true)
+			log.Debug("C3 sent at ", end.UnixNano())
+
+			time.Sleep(10 * time.Millisecond)
+			publishReading(client3, clockOffset, ClientID3, true)
+			time.Sleep(10 * time.Millisecond)
+			publishReading(client3, clockOffset, ClientID3, true)
+
+			log.Infoln("Elapsed |", end.Sub(start), "Sync Delay between Client 1 and 3")
+
+			//Send idle packets
+			publishReading(client1, clockOffset, ClientID1, false)
+			publishReading(client2, clockOffset, ClientID2, false)
+			publishReading(client3, clockOffset, ClientID3, false)
+			time.Sleep(5 * time.Millisecond)
+			publishReading(client1, clockOffset, ClientID1, false)
+			publishReading(client2, clockOffset, ClientID2, false)
+			publishReading(client3, clockOffset, ClientID3, false)
+			//time.Sleep(50 * time.Millisecond)
 		}
 		if last == 4 {
 			break T
@@ -129,12 +184,18 @@ T:
 	client3.Disconnect(10)
 }
 
-func publishReading(client mqtt.Client, clockOffset time.Duration, clientID string) time.Time {
+func publishReading(client mqtt.Client, clockOffset time.Duration, clientID string, isStart bool) time.Time {
 
 	topic := fmt.Sprintf("sensor/%s/data", clientID)
 	var reading *pb.Reading
 	reading = util.RandReading()
-	reading.IsStartMove = true
+
+	if isStart {
+		reading.IsStartMove = true
+	} else {
+		reading.IsStartMove = false
+	}
+	reading.ClientID = clientID
 	readingTime := clock.Add(time.Since(clock) + clockOffset)
 	reading.TimeStamp = readingTime.UnixNano()
 	payload, err := proto.Marshal(reading)
@@ -143,5 +204,6 @@ func publishReading(client mqtt.Client, clockOffset time.Duration, clientID stri
 	}
 	token := client.Publish(topic, 0, false, payload)
 	token.Wait()
+	//fmt.Println("Reading:", reading)
 	return readingTime
 }

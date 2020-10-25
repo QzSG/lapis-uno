@@ -32,7 +32,7 @@ func RandReading() *pb.Reading {
 	return &pb.Reading{
 		IsStartMove: isStart,
 		ClientID:    fmt.Sprint(rand.Intn(3)),
-		ClientPos:   int32(pos),
+		DancerNo:    int32(rand.Intn(3)),
 		AccX:        floats[0],
 		AccY:        floats[1],
 		AccZ:        floats[2],

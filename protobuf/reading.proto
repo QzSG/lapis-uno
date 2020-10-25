@@ -21,23 +21,26 @@ message Reading {
     // To identify the clients : *string|str|string
     string clientID = 2;
 
-    // Position of client : int32, int, int32
-    int32 clientPos = 3;
+    // Initial assigned dancer number : int32, int, int32
+    int32 dancerNo = 3;
 
+    // Position change of client : int32, int, int32
+    int32 posChange = 4;
+ 
     // Accelerometer X Axis value : *float64|float|double
-    double accX = 4;
+    double accX = 5;
     // Accelerometer Y Axis value : *float64|float|double
-    double accY = 5;
+    double accY = 6;
     // Accelerometer Z Axis value : *float64|float|double
-    double accZ = 6;
+    double accZ = 7;
 
     // Gyroscope Roll value : *float64|float|double
-    double gyroRoll = 7;
+    double gyroRoll = 8;
     // Gyroscope Pitch value : *float64|float|double
-    double gyroPitch = 8;
+    double gyroPitch = 9;
     // Gyroscope Yaw value : *float64|float|double
-    double gyroYaw = 9;
+    double gyroYaw = 10;
 
     // Timestamp in unix nanoseconds : *int64|int/long/int64 
-    int64 timeStamp = 10;
+    int64 timeStamp = 11;
 }

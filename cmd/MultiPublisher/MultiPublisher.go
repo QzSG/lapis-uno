@@ -23,6 +23,10 @@ func handleSignals(sigs <-chan os.Signal, done chan<- struct{}) {
 	log.WithFields(log.Fields{
 		"signal": sig,
 	}).Info("Signal Received")
+
+	client1.Disconnect(100)
+	client2.Disconnect(100)
+	client3.Disconnect(100)
 	done <- struct{}{}
 }
 
@@ -32,7 +36,10 @@ func init() {
 }
 
 var (
-	clock = time.Now()
+	clock   = time.Now()
+	client1 mqtt.Client
+	client2 mqtt.Client
+	client3 mqtt.Client
 )
 
 func main() {
@@ -73,7 +80,7 @@ func main() {
 		"Topic": topic,
 	}).Info("Client set to publish to topic")
 	*/
-	client1 := mqtt.NewClient(opts)
+	client1 = mqtt.NewClient(opts)
 	if token := client1.Connect(); token.Wait() && token.Error() != nil {
 		log.Panic(token.Error())
 	} else {
@@ -81,7 +88,7 @@ func main() {
 	}
 
 	opts.SetClientID(ClientID2)
-	client2 := mqtt.NewClient(opts)
+	client2 = mqtt.NewClient(opts)
 	if token := client2.Connect(); token.Wait() && token.Error() != nil {
 		log.Panic(token.Error())
 	} else {
@@ -89,7 +96,7 @@ func main() {
 	}
 
 	opts.SetClientID(ClientID3)
-	client3 := mqtt.NewClient(opts)
+	client3 = mqtt.NewClient(opts)
 	if token := client3.Connect(); token.Wait() && token.Error() != nil {
 		log.Panic(token.Error())
 	} else {
@@ -97,9 +104,10 @@ func main() {
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(150)
+	var periodms = 50
+	wg.Add(3000 / periodms)
 	time.Sleep(2 * time.Second)
-	ticker := time.NewTicker(time.Duration(20 * time.Millisecond))
+	ticker := time.NewTicker(time.Duration(time.Duration(periodms) * time.Millisecond))
 	defer ticker.Stop()
 
 	complete := make(chan struct{})
@@ -121,14 +129,11 @@ T:
 		}
 	}
 	<-done
-	client1.Disconnect(10)
-	client2.Disconnect(10)
-	client3.Disconnect(10)
 }
 
 func publishReading(client mqtt.Client, clockOffset time.Duration, clientID string, wg *sync.WaitGroup) {
-
 	defer wg.Done()
+
 	topic := fmt.Sprintf("sensor/%s/data", clientID)
 	var reading *pb.Reading
 	reading = util.RandReading()

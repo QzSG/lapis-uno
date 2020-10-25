@@ -1,0 +1,27 @@
+const http = require('http');
+
+http.createServer((request, response) => {
+  const { headers, method, url } = request;
+  let body = [];
+  request.on('error', (err) => {
+    console.error(err);
+  }).on('data', (chunk) => {
+    body.push(chunk);
+  }).on('end', () => {
+    body = JSON.parse(Buffer.concat(body).toString());
+    console.log(body)
+    response.on('error', (err) => {
+      console.error(err);
+    });
+
+    response.statusCode = 200;
+    response.setHeader('Content-Type', 'application/json');
+  
+    const responseBody = { status : "ok" };
+
+    response.write(JSON.stringify(responseBody));
+    response.end();
+
+    
+  });
+}).listen(3000);
