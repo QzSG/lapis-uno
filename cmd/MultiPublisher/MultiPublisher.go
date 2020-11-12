@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -58,9 +59,9 @@ func main() {
 	}
 	log.Info("NTP Offset:", clockOffset)
 	log.Info("NTP Clock:", clock.Add(time.Since(clock)+clockOffset))
-	const ClientID1 = "lapis-client-pub-1"
-	const ClientID2 = "lapis-client-pub-2"
-	const ClientID3 = "lapis-client-pub-3"
+	const ClientID1 = "1"
+	const ClientID2 = "2"
+	const ClientID3 = "3"
 	const BrokerConfig = "ssl://mqtts.qz.sg:8883"
 
 	log.Info("Connecting to " + BrokerConfig)
@@ -115,7 +116,8 @@ func main() {
 		time.Sleep(1 * time.Second)
 		complete <- struct{}{}
 	}()
-
+	var start = false
+	var tickCount = 0
 T:
 	for {
 		select {
@@ -123,25 +125,43 @@ T:
 			wg.Wait()
 			break T
 		case <-ticker.C:
-			go publishReading(client1, clockOffset, ClientID1, &wg)
-			go publishReading(client2, clockOffset, ClientID2, &wg)
-			go publishReading(client3, clockOffset, ClientID3, &wg)
+			tickCount++
+			go publishReading(client1, clockOffset, ClientID1, &wg, start, 2)
+			go publishReading(client2, clockOffset, ClientID2, &wg, start, -1)
+			go publishReading(client3, clockOffset, ClientID3, &wg, start, -1)
+			if tickCount%3 == 0 {
+				start = !start
+			}
 		}
 	}
 	<-done
 }
 
-func publishReading(client mqtt.Client, clockOffset time.Duration, clientID string, wg *sync.WaitGroup) {
+func publishReading(client mqtt.Client, clockOffset time.Duration, clientID string, wg *sync.WaitGroup, start bool, posChange int32) {
 	defer wg.Done()
 
 	topic := fmt.Sprintf("sensor/%s/data", clientID)
 	var reading *pb.Reading
 	reading = util.RandReading()
+	reading.ClientID = clientID
+	dNo, _ := strconv.Atoi(clientID)
+	reading.DancerNo = int32(dNo)
+	reading.PosChange = posChange + 3
+	reading.IsStartMove = start
 	reading.TimeStamp = clock.Add(time.Since(clock) + clockOffset).UnixNano()
+	var flag int
+	if reading.IsStartMove {
+		flag = 1
+	} else {
+		flag = 0
+	}
+	log.Debug(flag, " ", reading.ClientID, " ", reading.TimeStamp)
 	payload, err := proto.Marshal(reading)
 	if err != nil {
 		log.Fatalln("Failed to encode sensor reading:", err)
 	}
-	client.Publish(topic, 0, false, payload)
+	token := client.Publish(topic, 0, false, payload)
+
+	token.Wait()
 
 }

@@ -297,80 +297,64 @@ func updateRoutine() {
 			// 1  = right
 			// 2  = 2x right
 
-			sumChange := posPack1.change + posPack2.change + posPack3.change
-
 			log.Info("currPos | ", calcPos)
 
-			// The sums of posChanges should always be 0 regardless of postiion changes, otherwise there is an error in calculating posChange
-			if sumChange == 0 {
+			tempPos1 := dancerNoToPlace[1] + posPack1.change
+			tempPos2 := dancerNoToPlace[2] + posPack2.change
+			tempPos3 := dancerNoToPlace[3] + posPack3.change
 
-				tempPos1 := dancerNoToPlace[1] + posPack1.change
-				tempPos2 := dancerNoToPlace[2] + posPack2.change
-				tempPos3 := dancerNoToPlace[3] + posPack3.change
+			count := make(map[int]int)
 
-				count := make(map[int]int)
+			validPos := []bool{false, false, false}
+			var invalidDancers []int
+			invalidCount := 0
 
-				validPos := []bool{false, false, false}
-				var invalidDancers []int
-				invalidCount := 0
+			if tempPos1 > 0 && tempPos1 < 4 {
+				validPos[0] = true
+				dancerNoToPlace[1] = tempPos1
+			}
+			if tempPos2 > 0 && tempPos2 < 4 {
+				validPos[1] = true
+				dancerNoToPlace[2] = tempPos2
+			}
+			if tempPos3 > 0 && tempPos3 < 4 {
+				validPos[2] = true
+				dancerNoToPlace[3] = tempPos3
+			}
 
-				if tempPos1 > 0 && tempPos1 < 4 {
-					validPos[0] = true
-					dancerNoToPlace[1] = tempPos1
-				}
-				if tempPos2 > 0 && tempPos2 < 4 {
-					validPos[1] = true
-					dancerNoToPlace[2] = tempPos2
-				}
-				if tempPos3 > 0 && tempPos3 < 4 {
-					validPos[2] = true
-					dancerNoToPlace[3] = tempPos3
-				}
-
-				for dNo, place := range dancerNoToPlace {
-					if count[place] == 0 {
-						count[place] = count[place] + 1
-						if validPos[dNo-1] {
-							places[place] = dNo
-						} else {
-							invalidDancers = append(invalidDancers, dNo)
-							invalidCount++
-						}
+			for dNo, place := range dancerNoToPlace {
+				if count[place] == 0 {
+					count[place] = count[place] + 1
+					if validPos[dNo-1] {
+						places[place] = dNo
 					} else {
 						invalidDancers = append(invalidDancers, dNo)
 						invalidCount++
 					}
+				} else {
+					invalidDancers = append(invalidDancers, dNo)
+					invalidCount++
 				}
-
-				log.Info("invalidDancers | ", invalidDancers)
-
-				if invalidCount > 0 {
-					rand.Shuffle(len(invalidDancers), func(i, j int) { invalidDancers[i], invalidDancers[j] = invalidDancers[j], invalidDancers[i] })
-
-					ptr := 0
-					for x, dancer := range places {
-						if dancer == 0 {
-							places[x] = invalidDancers[ptr]
-							dancerNoToPlace[invalidDancers[ptr]] = x
-							ptr++
-						}
-
-					}
-				}
-
-				calcPos = fmt.Sprint(places[1], places[2], places[3])
-				log.Info("CalcPos | ", calcPos)
-			} else {
-				log.Warn("Sum of position changes is non ZERO, error in posChange detection from one or more devices")
-				log.Info("Calculating random positions")
-				random := []int{1, 2, 3}
-				rand.Shuffle(len(random), func(i, j int) { random[i], random[j] = random[j], random[i] })
-				calcPos = fmt.Sprint(random[0], random[1], random[2])
-				for i, dNo := range random {
-					dancerNoToPlace[dNo] = i + 1
-				}
-				log.Info("Random CalcPos | ", calcPos)
 			}
+
+			log.Info("invalidDancers | ", invalidDancers)
+
+			if invalidCount > 0 {
+				rand.Shuffle(len(invalidDancers), func(i, j int) { invalidDancers[i], invalidDancers[j] = invalidDancers[j], invalidDancers[i] })
+
+				ptr := 0
+				for x, dancer := range places {
+					if dancer == 0 {
+						places[x] = invalidDancers[ptr]
+						dancerNoToPlace[invalidDancers[ptr]] = x
+						ptr++
+					}
+
+				}
+			}
+
+			calcPos = fmt.Sprint(places[1], places[2], places[3])
+			log.Info("CalcPos | ", calcPos)
 
 		case delay := <-delayChan:
 			recvDelay = delay

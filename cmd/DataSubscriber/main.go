@@ -32,6 +32,7 @@ var (
 	cid            string
 	mode           string
 	evalClientConn string
+	ignore         string
 
 	start    = make(chan startPacket)
 	calcDone = make(chan struct{})
@@ -132,7 +133,7 @@ var f mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 					hasAllFirstStartPackets = true
 					log.Debug("Last start packet from ", startclient3.clientID)
 					log.Debug("Received first start packets for all 3 clients")
-					log.Debug("1: ", startclient1.clientID, "2 :", startclient2.clientID, "3: ", startclient3.clientID)
+					log.Debug("1: ", startclient1.clientID, " 2 :", startclient2.clientID, " 3: ", startclient3.clientID)
 					startclient1.Reset()
 					startclient2.Reset()
 					startclient3.Reset()
@@ -142,7 +143,7 @@ var f mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 		}
 		// Assumes all start packets will arrive long before first idle packet arrives
 		// If first idle packet not recv from each client, if all first start packets recved, if its not a start move, loop and wait for all idle packets (one from each client)
-		if !hasAllFirstIdlePackets && !reading.IsStartMove {
+		if !hasAllFirstIdlePackets && hasAllFirstStartPackets && !reading.IsStartMove {
 			//log.Debug("Entered idle")
 			switch idleCount {
 			case 0:
@@ -174,34 +175,16 @@ var f mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 			log.Debug("Waiting for next move to start")
 			waitForNextMove = true
 		}
-		if !initClients {
-			if c1 == "" {
-				c1 = reading.ClientID
-				log.Debug("C1 set")
-			} else {
-				if c2 == "" && c1 != reading.ClientID {
-					c2 = reading.ClientID
-					log.Debug("C2 set")
-				} else {
-					if c3 == "" && c1 != reading.ClientID && c2 != reading.ClientID {
-						c3 = reading.ClientID
-						log.Debug("C3 set")
-						initClients = true
-						log.Debug(c1, c2, c3)
-					}
-				}
-			}
-		}
 
 		switch reading.ClientID {
-		case c1:
+		case "1":
 			file1.WriteString(out)
 			file1.Sync()
 
-		case c2:
+		case "2":
 			file2.WriteString(out)
 			file2.Sync()
-		case c3:
+		case "3":
 			file3.WriteString(out)
 			file3.Sync()
 		}
@@ -238,15 +221,26 @@ func calcRoutine() {
 					"Slowest":   packets[2].clientID,
 					"SyncDelay": syncDelay,
 				}).Info("SyncDelay calculated")
-				msgChan <- message{msgType: "delay", data: fmt.Sprint(syncDelay.Seconds()), ts: fmt.Sprint(clock.Add(time.Since(clock) + offset).UnixNano())}
-				msgChan <- message{
-					msgType:   "positions",
-					data:      fmt.Sprint(packets[0].dancerNo, packets[1].dancerNo, packets[2].dancerNo),    // one single string for all initial pos ie: 0 2 3
-					extraData: fmt.Sprint(packets[0].posChange, packets[1].posChange, packets[2].posChange), // one single string for all posChange ie: -1 0 1
-					cids:      fmt.Sprint(packets[0].clientID, packets[1].clientID, packets[2].clientID),
-					ts:        fmt.Sprint(clock.Add(time.Since(clock) + offset).UnixNano()),
-				}
+				msgChan <- message{msgType: "delay", data: fmt.Sprint(syncDelay.Seconds() * 1000.00), ts: fmt.Sprint(clock.Add(time.Since(clock) + offset).UnixNano())}
 
+				if ignore != "pos" {
+					log.Info("Scaling down posChanges values")
+					log.Info("Current |", packets[0].posChange, packets[1].posChange, packets[2].posChange)
+
+					packets[0].posChange = packets[0].posChange - 3
+					packets[1].posChange = packets[1].posChange - 3
+					packets[2].posChange = packets[2].posChange - 3
+
+					log.Info("Scaled |", packets[0].posChange, packets[1].posChange, packets[2].posChange)
+
+					msgChan <- message{
+						msgType:   "positions",
+						data:      fmt.Sprint(packets[0].dancerNo, packets[1].dancerNo, packets[2].dancerNo),    // one single string for all initial pos ie: 0 2 3
+						extraData: fmt.Sprint(packets[0].posChange, packets[1].posChange, packets[2].posChange), // one single string for all posChange ie: -1 0 1
+						cids:      fmt.Sprint(packets[0].clientID, " ", packets[1].clientID, " ", packets[2].clientID),
+						ts:        fmt.Sprint(clock.Add(time.Since(clock) + offset).UnixNano()),
+					}
+				}
 				received = 0
 			}
 		case <-calcDone:
@@ -304,6 +298,7 @@ func init() {
 	flag.StringVar(&cid, "cid", "lapis-client-sub-"+fmt.Sprint(rand.Intn(1000)), "If not provided, defaults to lapis-client-sub-X where X is a random int between 1 & 1000")
 	flag.StringVar(&mode, "mode", "single", "Enter mode: single or multi, defaults to single. Single mode will not perform position nor latency calculation")
 	flag.StringVar(&evalClientConn, "evalclientconn", "http://127.0.0.1:10202", "please enter http://<ip>:<port> of evalclient httpserver, for example: -evalclientconn=http://127.0.0.1:10202")
+	flag.StringVar(&ignore, "ignore", "none", "Enter ignore: pos, defaults to none. pos will not calculate positions")
 	//log.SetOutput(os.Stdout)
 	log.SetLevel(log.DebugLevel)
 }
@@ -319,6 +314,7 @@ func main() {
 
 	flag.Parse()
 	log.Info("Starting in " + mode + " mode")
+	log.Info("Ignoring | " + ignore)
 	log.Info("Starting NTPClient to get offset")
 
 	clockOffset, err := ntp.Offset()

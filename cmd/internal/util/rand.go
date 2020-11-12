@@ -23,7 +23,7 @@ func RandReading() *pb.Reading {
 
 	floats := RandFloats(-10.00, 10.00, 6)
 	isStart := false
-	pos := rand.Intn(3) + 1
+	pos := rand.Intn(3)
 	if rand.Intn(2) == 1 {
 		isStart = true
 	} else {
@@ -31,8 +31,8 @@ func RandReading() *pb.Reading {
 	}
 	return &pb.Reading{
 		IsStartMove: isStart,
-		ClientID:    fmt.Sprint(rand.Intn(3)),
-		DancerNo:    int32(rand.Intn(3)),
+		ClientID:    fmt.Sprint(pos),
+		DancerNo:    int32(pos),
 		AccX:        floats[0],
 		AccY:        floats[1],
 		AccZ:        floats[2],

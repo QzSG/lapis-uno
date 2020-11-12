@@ -1,32 +1,86 @@
-# Readme 
+# Lapis Uno
+> External communications code written for CG4002 Computer Engineering Capstone Project
+
+## Summary
+Go code for external communications written for a school capstone project.
+Dancers have a hardware device which connects over BLE to a NodeJS client on the Dancers laptop. 
+
+NodeJS internal communication code communicates with DataPublisher for IPC over gRPC streams with Protocol Buffers.
+
+DataPublisher publishes sensor readings over MQTT to a secure MQTT broker
+The current broker lives at `mqtts.qz.sg` which is a hosted vernemq MQTT broker.
+At the time of this repo going public, the broker would have gone offline
+
+To test code, rebuild all relevant files after updating MQTT user, password as well as broker url in DataPublisher as well as DataSubscribers
+
+All DataPublishers publish to their own sensor topics `sensor/<cid>/data`
+Singular DataSubscriber subscribes to all dancer topics `sensor/+/data`
+
+Currently only 3 dancers are supported.
+
+This project was a testbed for me to actually learning & write something in Go
+as well as to test other technologies like gRPC as well as protocol buffers. They are probably not written with the best practices nor tested and should not be used in production.
 
 ## Running the different binaries
 ---
+
+> Use the binaries build for your platform under releases
+
+### DataPublisher
+ 
+```
+Flags:
+
+--mode, string          single or multi , defaults to single, use multi for multi dancers
+```
 
 ### DataSubscriber
  
 ```
 Flags:
 
---cid, string       Optional, If passed, mqtt sub will connect using cid as its client. 
-                    Pass in something unique to prevent having the same ids as other mqtt clients
+--cid, string           Optional, If passed, mqtt sub will connect using cid as its client. 
+                        Pass in something unique to prevent having the same ids as other mqtt clients
 
---mode              single or multi , defaults to single, use multi for multi dancers
+--mode, string          single or multi , defaults to single, use multi for multi dancers
 
---evalclientconn    Optional, Defaults to http://127.0.0.1:10202, not required if running EvalClient on same machine
+--evalclientconn        Optional, Defaults to http://127.0.0.1:10202, not required if running EvalClient on same machine
 ```
+ To run , example, run
+```
+./DataSubscriber -mode multi
+```
+
 
 ### EvalClient
 ```
 Flags:
  
---conn, string      Optional, Eval Server url and port, defaults to 127.0.0.1:12345 
+--conn, string          Optional, Eval Server url and port, defaults to 127.0.0.1:12345 
 
---dashconn          Defaults to http://127.0.0.1:3000/api/prediction/ 
-                    used to send results of prediction of pos, move & delay to dashboard server
+--dashconn. string      Defaults to http://127.0.0.1:3000/api/prediction/ 
+                        used to send results of prediction of pos, move & delay to dashboard server
 
---mode              single or multi , defaults to single, use multi for multi dancers
+--mode, string          single, multi or standalone , defaults to single, use multi for multi dancers, standalone allows you to test posting http to EvalClient without requiring eval_server.py (not included in this repo)
 ```
+
+To run, for example
+```
+./EvalClient-arm64 -mode=multi -conn=<evalserverip:port> -dashconn=<http url to receive predictions>
+```
+Change `-conn` ip:port to evalserverip and the port eval_server.py is running on (not provided in this repo)
+Change `-dashconn` to the http webhook url for your dashboard
+
+There is an alternative client `EvalClientIgnoreDisp-arm64` which ignores if sum of poschanges is non zero
+
+## Misc
+
+`GrpcClient`, `MultiPublisher` as well as `SyncDelay/sub` are used for testing
+
+`GrpcClient` simulates NodeJS sending data to `DataPublisher` over gRPC streams
+
+Some sample NodeJS code is provided in /nodejs for testing purposes and includes a sample on how to subscribe to MQTT topics and writing them to MongoDB
+on Mongo Atlas
 
 ## Proto format
 ---
@@ -92,3 +146,8 @@ message Reading {
     int64 timeStamp = 11;
 }
 ```
+
+## Disclaimer
+
+All code provided herein is to be treated as non production ready, neither has it undergone rigourious testing.
+Use at your own risk. In addition, all provided, urls, credentials, are all no longer in use, and domains may belong to others at the point this repo is made public.
